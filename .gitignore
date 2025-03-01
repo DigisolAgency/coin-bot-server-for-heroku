@@ -1,0 +1,8 @@
+.env
+node_modules
+package-lock.json
+test-request
+wallets.json
+dist
+.DS_Store
+yarn.lock
