@@ -158,7 +158,7 @@ export const getAmountByPercentage = (
     throw new Error("Buying percentage not defined");
   }
 
-  return (balance / 100) * buyingPercentage;
+  return ((balance / 1e9) / 100) * buyingPercentage;
 };
 
 export const getPriorityFee = async () => {
