@@ -31,21 +31,21 @@ export const handleNewToken = async (
     const index = buyings.get(memepad.name) || 0;
     const wallet = wallets[index % wallets.length];
 
-    if (wallet.purchases >= memepad.settings.buyingPerWallet) {
-      memepad.settings.purchaseActive = false;
-      await memepad.save();
+    // if (wallet.purchases >= memepad.settings.buyingPerWallet) {
+    //   memepad.settings.purchaseActive = false;
+    //   await memepad.save();
 
-      const activeMemePads = await memepadModel.find({
-        "settings.purchaseActive": true,
-        chain: SOLANA,
-      });
+    //   const activeMemePads = await memepadModel.find({
+    //     "settings.purchaseActive": true,
+    //     chain: SOLANA,
+    //   });
 
-      if (activeMemePads.length === 0) {
-        unsubscribeFromPumpfunData();
-      }
+    //   if (activeMemePads.length === 0) {
+    //     unsubscribeFromPumpfunData();
+    //   }
 
-      continue;
-    }
+    //   continue;
+    // }
 
     const validName = validateTokenName(
       memepad.settings.hardNames,
