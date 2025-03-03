@@ -201,7 +201,7 @@ export class SolanaMemePadService implements IBaseMemePadService {
         wallet: stat.wallet,
         walletBalance: walletBalance / 1e9,
         tokenAddress: stat.tokenAddress,
-        tokenAmount: tokenAmount.value.uiAmount,
+        tokenAmount,
         tokenSymbol: stat.tokenSymbol,
         tokenPrice,
         tokenMarketCap: coinInfo.usd_market_cap,
