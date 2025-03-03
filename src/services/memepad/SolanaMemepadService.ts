@@ -10,7 +10,7 @@ import {
 } from "../../utils/websocket";
 import { IBaseMemePadService } from "./BaseMemepadService";
 import config from "../../config/config";
-import { getCoinInfo, getTokenAccount, getWalletBalance } from "../../utils/statistics";
+import { getCoinInfo, getTokenAccount, getWalletBalance, removeStatistic } from "../../utils/statistics";
 import { sendSellTransactionWithJito } from "../../utils/jitoBundles";
 
 const SOLANA = "solana";
@@ -129,9 +129,7 @@ export class SolanaMemePadService implements IBaseMemePadService {
       )
       .exec();
 
-    if (activeMemePads.length === 1) {
-        console.log(activeMemePads.length);
-        
+    if (activeMemePads.length === 1) {        
       subscribeToPumpfunData(async (tokenData) => {
         await handleNewToken(
           tokenData,
@@ -180,9 +178,18 @@ export class SolanaMemePadService implements IBaseMemePadService {
     const coinInfos: Map<string, CoinInfo> = new Map();
 
     for await (const stat of memePadStatistics.statistics) {
-      const walletBalance = await getWalletBalance(stat.wallet, balances, this.connection);
       const tokenAccount = await getTokenAccount(stat.wallet, stat.tokenAddress, accounts);
-      const tokenAmount = await this.connection.getTokenAccountBalance(tokenAccount);
+
+      let tokenAmount = 0 as any;
+      try {
+        const tokenAmountResp = await this.connection.getTokenAccountBalance(tokenAccount);
+        tokenAmount = tokenAmountResp.value.uiAmount;
+      } catch (e) {
+        await removeStatistic(stat._id as string);
+        continue;
+      }
+    
+      const walletBalance = await getWalletBalance(stat.wallet, balances, this.connection);
       const coinInfo = await getCoinInfo(stat.tokenAddress, coinInfos);
 
       const tokenPrice =

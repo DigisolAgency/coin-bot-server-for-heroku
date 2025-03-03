@@ -1,6 +1,7 @@
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { CoinInfo, getCoinInfo as _getCoinInfo } from "./handleNewToken";
+import memepadModel from "../models/memepad.model";
 
 export const getWalletBalance = async (
   wallet: string,
@@ -44,5 +45,16 @@ export const getCoinInfo = async (
     const coinInfo = await _getCoinInfo(tokenAddress);
     coinInfos.set(tokenAddress, coinInfo);
     return coinInfo;
+  }
+};
+
+export const removeStatistic = async (statId: string): Promise<void> => {
+  try {
+    await memepadModel.updateOne(
+      { "statistics._id": statId },
+      { $pull: { statistics: { _id: statId } } }
+    );
+  } catch (error) {
+    console.error(`Error removing statistic with ID ${statId}:`, error);
   }
 };
