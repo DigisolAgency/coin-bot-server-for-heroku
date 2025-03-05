@@ -80,6 +80,8 @@ export class BscMemePadService implements IBaseMemePadService {
     return [];
   }
 
+  async unTrackStatistics(memePadName: string): Promise<void> {}
+
   async sellToken(
     memePadName: string,
     wallet: string,
@@ -87,4 +89,14 @@ export class BscMemePadService implements IBaseMemePadService {
     percentage: number,
     slippage: number
   ): Promise<void> {}
+
+  async getHistory(memePadName: string): Promise<any[]> {
+    return [];
+  }
+  async getSellHistory(memePadName: string): Promise<any[]> {
+    return [];
+  }
+  async getBuyHistory(memePadName: string): Promise<any[]> {
+    return [];
+  }
 }

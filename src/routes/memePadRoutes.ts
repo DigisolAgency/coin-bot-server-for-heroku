@@ -11,7 +11,11 @@ import {
   startPurchases,
   stopPurchases,
   trackStatistics,
-  sellToken
+  unTrackStatistics,
+  sellToken,
+  getHistory,
+  getSellHistory,
+  getBuyHistory,
 } from "../controllers/memePadController";
 
 const router = Router();
@@ -143,6 +147,19 @@ const trackStatisticsSchema = {
   },
 };
 
+const unTrackStatisticsSchema = {
+  memePadName: {
+    in: ["body"] as Location[],
+    isString: true,
+    notEmpty: true,
+  },
+  chain: {
+    in: ["body"] as Location[],
+    isString: true,
+    notEmpty: true,
+  },
+};
+
 const sellTokenSchema = {
   memePadName: {
     in: ["body"] as Location[],
@@ -176,6 +193,19 @@ const sellTokenSchema = {
   },
 };
 
+const historySchema = {
+  memePadName: {
+    in: ["params"] as Location[],
+    isString: true,
+    notEmpty: true,
+  },
+  chain: {
+    in: ["query"] as Location[],
+    isString: true,
+    notEmpty: true,
+  },
+}
+
 router.post("/create", checkSchema(createMemePadSchema), createMemePad);
 router.delete("/:name", checkSchema(deleteMemePadSchema), deleteMemePad);
 router.put("/:name", checkSchema(updateMemePadSchema), updateMemePad);
@@ -202,6 +232,16 @@ router.post(
   trackStatistics
 );
 
+router.post(
+  "/unTrackStatistics",
+  checkSchema(unTrackStatisticsSchema),
+  unTrackStatistics
+);
+
 router.post("/sellToken", checkSchema(sellTokenSchema), sellToken);
+
+router.get("/history/:memePadName", checkSchema(historySchema), getHistory);
+router.get("/sellHistory/:memePadName", checkSchema(historySchema), getSellHistory);
+router.get("/buyHistory/:memePadName", checkSchema(historySchema), getBuyHistory);
 
 export default router;

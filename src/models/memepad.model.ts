@@ -4,6 +4,7 @@ export interface IStatistics extends Document {
   wallet: string;
   tokenAddress: string;
   tokenSymbol: string;
+  boughtMarketCapSol: number;
 }
 
 export interface ISettings extends Document {
@@ -46,6 +47,7 @@ const MemePadSchema: Schema = new Schema({
       wallet: { type: String },
       tokenAddress: { type: String },
       tokenSymbol: { type: String },
+      boughtMarketCapSol: { type: Number },
     },
   ],
   chain: { type: String, enum: ["solana", "bsc"], required: true },

@@ -1,4 +1,9 @@
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  TransactionSignature,
+} from "@solana/web3.js";
 import { decrypt } from "./encrypt";
 import bs58 from "bs58";
 import memepadModel, { IMemePad } from "../models/memepad.model";
@@ -6,10 +11,12 @@ import walletModel from "../models/wallet.model";
 import { sendBuyTransactionWithJito } from "./jitoBundles";
 import { unsubscribeFromPumpfunData } from "./websocket";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
+import historyModel from "../models/history.model";
 
 export interface CoinInfo {
   usd_market_cap?: number;
   total_supply?: number;
+  market_cap?: number;
 }
 
 const SOLANA = "solana";
@@ -22,7 +29,7 @@ export const handleNewToken = async (
 ) => {
   if (!tokenData.name) return;
 
-  for (const memepad of activeMemePads) {
+  for await (const memepad of activeMemePads) {
     const wallets = await walletModel.find({
       group: memepad.settings.walletsListName,
       chain: SOLANA,
@@ -75,7 +82,7 @@ export const handleNewToken = async (
 
     console.log("Amount: ", amount);
 
-    const success = await sendBuyTransactionWithJito(
+    const signature = await sendBuyTransactionWithJito(
       keypair,
       tokenMintAddress,
       amount,
@@ -83,7 +90,9 @@ export const handleNewToken = async (
       priorityFee
     );
 
-    if (!success) continue;
+    if (!signature) continue;
+
+    // await confirmTransaction(connection, signature);
 
     await walletModel
       .findOneAndUpdate(
@@ -95,6 +104,15 @@ export const handleNewToken = async (
 
     buyings.set(memepad.name, index + 1);
 
+    // const tokenAccountAddress = await getAssociatedTokenAddress(
+    //   new PublicKey(tokenMintAddress),
+    //   keypair.publicKey
+    // );
+
+    // const balance = await connection.getTokenAccountBalance(
+    //   tokenAccountAddress
+    // );
+
     await memepadModel
       .findOneAndUpdate(
         { name: memepad.name, chain: SOLANA },
@@ -104,11 +122,22 @@ export const handleNewToken = async (
               wallet: wallet.address,
               tokenAddress: tokenMintAddress,
               tokenSymbol: tokenData.symbol,
+              boughtMarketCapSol: tokenData.marketCapSol,
             },
           },
         }
       )
       .exec();
+
+    await historyModel.create({
+      memePadName: memepad.name,
+      wallet: wallet.address,
+      tokenAddress: tokenMintAddress,
+      tokenSymbol: tokenData.symbol,
+      amount: 0,
+      type: "buy",
+      signature
+    })
   }
 };
 
@@ -158,7 +187,7 @@ export const getAmountByPercentage = (
     throw new Error("Buying percentage not defined");
   }
 
-  return ((balance / 1e9) / 100) * buyingPercentage;
+  return (balance / 1e9 / 100) * buyingPercentage;
 };
 
 export const getPriorityFee = async () => {
@@ -178,18 +207,36 @@ export const getCoinInfo = async (coin: string) => {
 };
 
 export const getAmountToSell = async (
-    wallet: PublicKey,
-    token: PublicKey,
-    percentage: number,
-    connection: Connection
+  wallet: PublicKey,
+  token: PublicKey,
+  percentage: number,
+  connection: Connection
 ) => {
-    const walletAta = await getAssociatedTokenAddress(token, wallet);
+  const walletAta = await getAssociatedTokenAddress(token, wallet);
 
-    const tokenAmount = await connection.getTokenAccountBalance(walletAta);
+  const tokenAmount = await connection.getTokenAccountBalance(walletAta);
 
-    if (!tokenAmount.value.uiAmount) {
-        throw new Error("Token amount not found");
-    }
+  if (!tokenAmount.value.uiAmount) {
+    throw new Error("Token amount not found");
+  }
 
-    return (tokenAmount.value.uiAmount / 100) * percentage;
-}
+  return (tokenAmount.value.uiAmount / 100) * percentage;
+};
+
+export const confirmTransaction = async (
+  connection: Connection,
+  signature: TransactionSignature
+) => {
+  const block = await connection.getLatestBlockhash("confirmed");
+  const { value } = await connection.confirmTransaction(
+    {
+      signature,
+      ...block,
+    },
+    "confirmed"
+  );
+
+  if (value.err) {
+    throw new Error(`Transaction ${signature} failed: ${value.err}`);
+  }
+};
