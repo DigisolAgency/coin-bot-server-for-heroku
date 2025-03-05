@@ -159,9 +159,9 @@ export const getSellHistory = asyncHandler(async (req: Request, res: Response) =
   const { memePadName } = req.params;
   const { chain } = req.query;
   const memepadService = MemePadServiceFactory.getService(chain as "solana" | "bsc");
-  const sellHistory = await memepadService.getSellHistory(memePadName);
+  const history = await memepadService.getSellHistory(memePadName);
 
-  res.status(200).json({ sellHistory });
+  res.status(200).json({ history });
 });
 
 // GET /memepads/buyHistory/:memePadName
@@ -171,7 +171,7 @@ export const getBuyHistory = asyncHandler(async (req: Request, res: Response) =>
   const { memePadName } = req.params;
   const { chain } = req.query;
   const memepadService = MemePadServiceFactory.getService(chain as "solana" | "bsc");
-  const buyHistory = await memepadService.getBuyHistory(memePadName);
+  const history = await memepadService.getBuyHistory(memePadName);
 
-  res.status(200).json({ buyHistory });
+  res.status(200).json({ history });
 });
