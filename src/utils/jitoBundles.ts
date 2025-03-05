@@ -1,5 +1,6 @@
 import { VersionedTransaction, Keypair } from "@solana/web3.js";
 import bs58 from "bs58";
+import { confirmTransaction } from "./handleNewToken";
 
 export const sendBuyTransactionWithJito = async (
   signerKeyPair: Keypair,
@@ -46,6 +47,7 @@ const sendTransactionWithJito = async (
   action: "buy" | "sell",
   denominatedInSol: "true" | "false"
 ) => {
+  let signature: string | false = false;
   const bundledTxArgs = [
     {
       publicKey: signerKeyPair.publicKey.toBase58(),
@@ -102,10 +104,11 @@ const sendTransactionWithJito = async (
     for (let i = 0; i < signatures.length; i++) {
       console.log(`Transaction: https://solscan.io/tx/${signatures[i]}`);
     }
+    signature = signatures[0];
   } else {
     console.log("Pumpfun error:", response.statusText);
     return false;
   }
 
-  return true;
+  return signature;
 };

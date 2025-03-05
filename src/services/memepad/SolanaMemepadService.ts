@@ -6,22 +6,28 @@ import { CoinInfo, getAmountToSell, getKeypair, getPriorityFee, handleNewToken }
 import {
   initPumpfunWebSocket,
   subscribeToPumpfunData,
+  subscribeToPumpfunTokenTrade,
   unsubscribeFromPumpfunData,
+  unsubscribeFromPumpfunTokenTrade,
 } from "../../utils/websocket";
 import { IBaseMemePadService } from "./BaseMemepadService";
 import config from "../../config/config";
-import { getCoinInfo, getTokenAccount, getWalletBalance, removeStatistic } from "../../utils/statistics";
+import { getCoinInfo, getSolanaPrice, getTokenAccount, getWalletBalance, removeStatistic } from "../../utils/statistics";
 import { sendSellTransactionWithJito } from "../../utils/jitoBundles";
+import { handleTokenTrade } from "../../utils/handleTokenTrade";
+import historyModel from "../../models/history.model";
 
 const SOLANA = "solana";
 
 export class SolanaMemePadService implements IBaseMemePadService {
   private connection: Connection;
   private buyings: Map<string, number> = new Map();
+  private tracks: Map<string, string[]> = new Map();
 
   constructor() {
     this.connection = new Connection(config.solanaRpc, "confirmed");
     this.buyings = new Map();
+    this.tracks = new Map();
 
     memepadModel
       .updateMany({ chain: SOLANA }, { "settings.purchaseActive": false })
@@ -172,10 +178,16 @@ export class SolanaMemePadService implements IBaseMemePadService {
 
     if (!memePadStatistics) return [];
 
+    unsubscribeFromPumpfunTokenTrade(this.tracks.get(memePadName) || []);
+
     const returnStatistics: any[] = [];
     const balances: Map<string, number> = new Map();
     const accounts: Map<string, PublicKey> = new Map();
     const coinInfos: Map<string, CoinInfo> = new Map();
+    this.tracks.set(memePadName, []);
+
+    const solPrice = await getSolanaPrice();
+    let totalSupplyDecimals = 0;
 
     for await (const stat of memePadStatistics.statistics) {
       const tokenAccount = await getTokenAccount(stat.wallet, stat.tokenAddress, accounts);
@@ -191,11 +203,17 @@ export class SolanaMemePadService implements IBaseMemePadService {
     
       const walletBalance = await getWalletBalance(stat.wallet, balances, this.connection);
       const coinInfo = await getCoinInfo(stat.tokenAddress, coinInfos);
+      totalSupplyDecimals = coinInfo.total_supply / 1e6;
 
-      const tokenPrice =
-        coinInfo.usd_market_cap && coinInfo.total_supply
-          ? coinInfo.usd_market_cap / (coinInfo.total_supply / 1000000)
-          : undefined;
+      const tokenPriceSol = coinInfo.market_cap / totalSupplyDecimals;
+      const tokenAmountsPrice = tokenPriceSol * tokenAmount;
+
+      const boughtTokenPriceSol = stat.boughtMarketCapSol / totalSupplyDecimals;
+      const boughtTokenAmountsPrice = boughtTokenPriceSol * tokenAmount;
+
+      if (!this.tracks.get(memePadName).includes(stat.tokenAddress)) {
+        this.tracks.get(memePadName).push(stat.tokenAddress);
+      }
 
       returnStatistics.push({
         wallet: stat.wallet,
@@ -203,12 +221,39 @@ export class SolanaMemePadService implements IBaseMemePadService {
         tokenAddress: stat.tokenAddress,
         tokenAmount,
         tokenSymbol: stat.tokenSymbol,
-        tokenPrice,
+        tokenPrice: tokenAmountsPrice,
+        percentDifference: ((tokenAmountsPrice - boughtTokenAmountsPrice) / boughtTokenAmountsPrice) * 100,
         tokenMarketCap: coinInfo.usd_market_cap,
       });
     }
 
+    const tokensToTrack = this.tracks.get(memePadName);
+    console.log("Tokens to track:", tokensToTrack);
+
+    if (returnStatistics.length > 0) {
+      subscribeToPumpfunTokenTrade(tokensToTrack, async (tokenData) => {
+        const statisticsWithToken = memePadStatistics.statistics.filter((stat) => stat.tokenAddress === tokenData.mint);
+        if (statisticsWithToken.length === 0) return;
+        for await (const stat of statisticsWithToken) {          
+          await handleTokenTrade(
+            stat.wallet,
+            stat.boughtMarketCapSol,
+            solPrice,
+            totalSupplyDecimals,
+            this.connection,
+            tokenData,
+            accounts
+          )
+        }
+      });
+    }
+
     return returnStatistics;
+  }
+
+  async unTrackStatistics(memePadName: string): Promise<void> {
+    unsubscribeFromPumpfunTokenTrade(this.tracks.get(memePadName) || []);
+    this.tracks.set(memePadName, []);
   }
 
   async sellToken(
@@ -237,7 +282,7 @@ export class SolanaMemePadService implements IBaseMemePadService {
         this.connection
     )
 
-    const success = await sendSellTransactionWithJito(
+    const signature = await sendSellTransactionWithJito(
         keypair,
         tokenAddress,
         amount,
@@ -245,11 +290,11 @@ export class SolanaMemePadService implements IBaseMemePadService {
         priorityFee
     )
 
-    if (!success) {
+    if (!signature) {
         throw new Error("Sell transaction failed");
     }
 
-    const statistics = await memePadDoc.statistics;
+    const statistics = memePadDoc.statistics;
     const statIndex = statistics.findIndex((stat) => stat.wallet === wallet && stat.tokenAddress === tokenAddress);
     if (statIndex === -1) {
         throw new Error("Statistics not found");
@@ -260,5 +305,95 @@ export class SolanaMemePadService implements IBaseMemePadService {
     }
 
     await memePadDoc.save();
+
+    const buyHistory = await historyModel.findOne({ memePadName, wallet, tokenAddress, type: "buy" }).exec();
+
+    let tokenSymbol = "";
+    if (buyHistory) {
+      tokenSymbol = buyHistory.tokenSymbol;
+    } else {
+      tokenSymbol = "Unknown";
+    }
+
+    await historyModel.create({
+      memePadName,
+      wallet,
+      tokenAddress,
+      tokenSymbol,
+      amount,
+      type: "sell",
+      signature
+    })
+  }
+
+  async getHistory(memePadName: string): Promise<any[]> {
+    let history = await historyModel.find({ memePadName }).exec();
+
+    let isChanged = false;
+    for await (const hist of history) {
+      if (hist.amount !== 0) continue;
+
+      const tx = await this.connection.getParsedTransactions([hist.signature], {
+        maxSupportedTransactionVersion: 0,
+      });
+
+      for await (const bal of tx[0].meta.postTokenBalances) {        
+        if (bal.owner == hist.wallet) {
+           await historyModel
+            .findOneAndUpdate(
+              { _id: hist._id },
+              { amount: bal.uiTokenAmount.uiAmount }
+            )
+            .exec();
+          break;
+        }
+      }
+
+      isChanged = true;
+    }
+
+    if (isChanged) {
+      history = await historyModel.find({ memePadName }).exec();
+    }
+
+    return history;
+  }
+
+  async getSellHistory(memePadName: string): Promise<any[]> {
+    const history = await historyModel.find({ memePadName, type: "sell" }).exec();
+    return history;
+  }
+
+  async getBuyHistory(memePadName: string): Promise<any[]> {
+    let history = await historyModel.find({ memePadName, type: "buy" }).exec();
+
+    let isChanged = false;
+    for await (const hist of history) {
+      if (hist.amount !== 0) continue;
+
+      const tx = await this.connection.getParsedTransactions([hist.signature], {
+        maxSupportedTransactionVersion: 0,
+      });
+
+      for await (const bal of tx[0].meta.postTokenBalances) {        
+        if (bal.owner == hist.wallet) {
+          await historyModel
+            .findOneAndUpdate(
+              { _id: hist._id },
+              { amount: bal.uiTokenAmount.uiAmount }
+            )
+            .exec();
+          break;
+        }
+      }
+
+      isChanged = true;
+    }
+
+    if (isChanged) {
+      history = await historyModel.find({ memePadName, type: "buy" }).exec();
+    }
+
+    return history;
   }
 }

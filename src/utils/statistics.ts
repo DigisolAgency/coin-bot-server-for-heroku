@@ -58,3 +58,11 @@ export const removeStatistic = async (statId: string): Promise<void> => {
     console.error(`Error removing statistic with ID ${statId}:`, error);
   }
 };
+
+export const getSolanaPrice = async (): Promise<number> => {
+  const solInfo = await fetch(
+    "https://api.coinpaprika.com/v1/tickers/sol-solana"
+  );
+  const solData = await solInfo.json();
+  return solData.quotes.USD.price;
+};

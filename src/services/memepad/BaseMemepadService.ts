@@ -17,6 +17,7 @@ export interface IBaseMemePadService {
 
   stopPurchasingTokens(memePadName: string): Promise<void>;
   trackStatistics(memePadName: string): Promise<any[]>;
+  unTrackStatistics(memePadName: string): Promise<void>;
 
   sellToken(
     memePadName: string,
@@ -25,4 +26,8 @@ export interface IBaseMemePadService {
     percentage: number,
     slippage: number
   ): Promise<void>;
+
+  getHistory(memePadName: string): Promise<any[]>;
+  getSellHistory(memePadName: string): Promise<any[]>;
+  getBuyHistory(memePadName: string): Promise<any[]>;
 }

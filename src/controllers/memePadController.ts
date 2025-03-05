@@ -96,7 +96,7 @@ export const startPurchases = asyncHandler(async (req: Request, res: Response) =
   res.status(200).json({ message: "Purchasing tokens started" });
 });
 
-// POST /wallets/stopPurchase
+// POST /memepads/stopPurchase
 export const stopPurchases = asyncHandler(async (req: Request, res: Response) => {
   if (!validateRequest(req, res)) return;
 
@@ -107,7 +107,7 @@ export const stopPurchases = asyncHandler(async (req: Request, res: Response) =>
   res.status(200).json({ message: "Purchasing tokens stopped" });
 });
 
-// POST /wallets/trackStatistics
+// POST /memepads/trackStatistics
 export const trackStatistics = asyncHandler(async (req: Request, res: Response) => {
   if (!validateRequest(req, res)) return;
 
@@ -118,7 +118,18 @@ export const trackStatistics = asyncHandler(async (req: Request, res: Response) 
   res.status(200).json({ message: "Statistics tracking started", stats });
 });
 
-// POST /wallets/sellToken
+// POST /memepads/unTrackStatistics
+export const unTrackStatistics = asyncHandler(async (req: Request, res: Response) => {
+  if (!validateRequest(req, res)) return;
+
+  const { chain, memePadName } = req.body;
+  const memepadService = MemePadServiceFactory.getService(chain as "solana" | "bsc");
+  await memepadService.unTrackStatistics(memePadName);
+
+  res.status(200).json({ message: "Statistics tracking stopped" });
+});
+
+// POST /memepads/sellToken
 export const sellToken = asyncHandler(async (req: Request, res: Response) => {
   if (!validateRequest(req, res)) return;
 
@@ -127,4 +138,40 @@ export const sellToken = asyncHandler(async (req: Request, res: Response) => {
   await memepadService.sellToken(memePadName, wallet, tokenAddress, percentage, slippage);
 
   res.status(200).json({ message: "Token sold successfully" });
+});
+
+// GET /memepads/history/:memePadName
+export const getHistory = asyncHandler(async (req: Request, res: Response) => {
+  if (!validateRequest(req, res)) return;
+
+  const { memePadName } = req.params;
+  const { chain } = req.query;
+  const memepadService = MemePadServiceFactory.getService(chain as "solana" | "bsc");
+  const history = await memepadService.getHistory(memePadName);
+
+  res.status(200).json({ history });
+});
+
+// GET /memepads/sellHistory/:memePadName
+export const getSellHistory = asyncHandler(async (req: Request, res: Response) => {
+  if (!validateRequest(req, res)) return;
+
+  const { memePadName } = req.params;
+  const { chain } = req.query;
+  const memepadService = MemePadServiceFactory.getService(chain as "solana" | "bsc");
+  const sellHistory = await memepadService.getSellHistory(memePadName);
+
+  res.status(200).json({ sellHistory });
+});
+
+// GET /memepads/buyHistory/:memePadName
+export const getBuyHistory = asyncHandler(async (req: Request, res: Response) => {
+  if (!validateRequest(req, res)) return;
+
+  const { memePadName } = req.params;
+  const { chain } = req.query;
+  const memepadService = MemePadServiceFactory.getService(chain as "solana" | "bsc");
+  const buyHistory = await memepadService.getBuyHistory(memePadName);
+
+  res.status(200).json({ buyHistory });
 });
