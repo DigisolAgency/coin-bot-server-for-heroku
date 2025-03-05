@@ -51,10 +51,10 @@ const sendTokenActivityMessage = (
     type: "token_activity",
     wallet,
     tokenAddress,
-    tokenBalance,
+    tokenAmount: tokenBalance,
     tokenPrice,
     percentDifference,
-    marketCap,
+    tokenMarketCap: marketCap,
   });
   broadcastMessage(message);
 };

@@ -267,7 +267,7 @@ export class SolanaMemePadService implements IBaseMemePadService {
     if (!memePadDoc) throw new Error("MemePad does not exist");
 
     const walletDoc = await walletModel.findOne({
-        group: memePadDoc.settings.walletsListName, address: wallet, chain: SOLANA
+        address: wallet, chain: SOLANA
     });
 
     if (!walletDoc) throw new Error("Wallet does not exist");
