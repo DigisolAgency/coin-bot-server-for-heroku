@@ -337,6 +337,11 @@ export class SolanaMemePadService implements IBaseMemePadService {
         maxSupportedTransactionVersion: 0,
       });
 
+      if (!tx) {
+        await historyModel.deleteOne({ _id: hist._id }).exec();
+        continue;
+      }
+
       for await (const bal of tx[0].meta.postTokenBalances) {        
         if (bal.owner == hist.wallet) {
            await historyModel
@@ -374,6 +379,11 @@ export class SolanaMemePadService implements IBaseMemePadService {
       const tx = await this.connection.getParsedTransactions([hist.signature], {
         maxSupportedTransactionVersion: 0,
       });
+
+      if (!tx) {
+        await historyModel.deleteOne({ _id: hist._id }).exec();
+        continue;
+      }
 
       for await (const bal of tx[0].meta.postTokenBalances) {        
         if (bal.owner == hist.wallet) {
