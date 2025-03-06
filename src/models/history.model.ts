@@ -8,6 +8,7 @@ interface IHistory extends Document {
   type: "buy" | "sell";
   amount: number;
   signature: string;
+  timestamp: Date;
 }
 
 const HistorySchema: Schema = new Schema({
@@ -18,6 +19,7 @@ const HistorySchema: Schema = new Schema({
   type: { type: String, enum: ["buy", "sell"], required: true },
   amount: { type: Number, required: true },
   signature: { type: String, required: true },
+  timestamp: { type: Date, default: Date.now },
 });
 
 export default mongoose.model<IHistory>("History", HistorySchema);

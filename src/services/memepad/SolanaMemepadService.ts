@@ -327,7 +327,10 @@ export class SolanaMemePadService implements IBaseMemePadService {
   }
 
   async getHistory(memePadName: string): Promise<any[]> {
-    let history = await historyModel.find({ memePadName }).exec();
+    let history = await historyModel
+      .find({ memePadName })
+      .sort({ timestamp: -1 })
+      .exec();
 
     let isChanged = false;
     for await (const hist of history) {
@@ -358,19 +361,29 @@ export class SolanaMemePadService implements IBaseMemePadService {
     }
 
     if (isChanged) {
-      history = await historyModel.find({ memePadName }).exec();
+      history = await historyModel
+        .find({ memePadName })
+        .sort({ timestamp: -1 })
+        .exec();
     }
 
     return history;
   }
 
   async getSellHistory(memePadName: string): Promise<any[]> {
-    const history = await historyModel.find({ memePadName, type: "sell" }).exec();
+    const history = await historyModel
+      .find({ memePadName, type: "sell" })
+      .sort({ timestamp: -1 })
+      .exec();
+
     return history;
   }
 
   async getBuyHistory(memePadName: string): Promise<any[]> {
-    let history = await historyModel.find({ memePadName, type: "buy" }).exec();
+    let history = await historyModel
+      .find({ memePadName, type: "buy" })
+      .sort({ timestamp: -1 })
+      .exec();
 
     let isChanged = false;
     for await (const hist of history) {
@@ -401,7 +414,10 @@ export class SolanaMemePadService implements IBaseMemePadService {
     }
 
     if (isChanged) {
-      history = await historyModel.find({ memePadName, type: "buy" }).exec();
+      history = await historyModel
+        .find({ memePadName, type: "buy" })
+        .sort({ timestamp: -1 })
+        .exec();
     }
 
     return history;
