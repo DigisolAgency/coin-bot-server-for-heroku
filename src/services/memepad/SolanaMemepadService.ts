@@ -340,7 +340,9 @@ export class SolanaMemePadService implements IBaseMemePadService {
         maxSupportedTransactionVersion: 0,
       });
 
-      if (!tx) {
+      console.log("Parse tx:", tx);
+
+      if (!tx || !tx[0]) {
         await historyModel.deleteOne({ _id: hist._id }).exec();
         continue;
       }
@@ -393,7 +395,9 @@ export class SolanaMemePadService implements IBaseMemePadService {
         maxSupportedTransactionVersion: 0,
       });
 
-      if (!tx) {
+      console.log("Parse tx:", tx);
+
+      if (!tx || !tx[0]) {
         await historyModel.deleteOne({ _id: hist._id }).exec();
         continue;
       }
