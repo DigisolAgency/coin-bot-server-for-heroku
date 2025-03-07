@@ -223,7 +223,7 @@ export const getPriorityFee = async () => {
     `https://bundles.jito.wtf/api/v1/bundles/tip_floor`
   );
   const data = await response.json();
-  return data[0].landed_tips_50th_percentile;
+  return data[0].landed_tips_95th_percentile;
 };
 
 export const getCoinInfo = async (coin: string) => {
