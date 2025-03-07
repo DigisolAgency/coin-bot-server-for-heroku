@@ -5,6 +5,10 @@ export let pumpfunWebSocket: WebSocket;
 let pumpfunMessageHandler: ((data: any) => void) | null = null;
 let pumpfunTokenTradeMessageHandler: ((data: any) => void) | null = null;
 
+const TX_TYPE_CREATE = "create";
+const TX_TYPE_BUY = "buy";
+const TX_TYPE_SELL = "sell";
+
 export function initWebSocket(server: any) {
   wss = new WebSocket.Server({ server });
 }
@@ -45,9 +49,12 @@ export function subscribeToPumpfunData(
 
   pumpfunMessageHandler = function message(data: any) {
     const parsed = JSON.parse(data);
-    console.log("[Pumpfun] Received:", parsed);
 
-    onTokenCreated(parsed);
+    if (parsed.txType === TX_TYPE_CREATE) {
+      console.log("[Pumpfun] Received:", parsed);
+
+      onTokenCreated(parsed);
+    }
   };
 
   ws.on("message", pumpfunMessageHandler);
@@ -101,9 +108,12 @@ export function subscribeToPumpfunTokenTrade(
 
   pumpfunTokenTradeMessageHandler = function message(data: any) {
     const parsed = JSON.parse(data);
-    console.log("[Pumpfun] Token Trade Received:", parsed);
 
-    onTokenTrade(parsed);
+    if (parsed.txType === TX_TYPE_BUY || parsed.txType === TX_TYPE_SELL) {
+      console.log("[Pumpfun] Token Trade Received:", parsed);
+
+      onTokenTrade(parsed);
+    }
   };
 
   ws.on("message", pumpfunTokenTradeMessageHandler);
@@ -112,7 +122,10 @@ export function subscribeToPumpfunTokenTrade(
 export function unsubscribeFromPumpfunTokenTrade(keysArray: string[]) {
   const ws = pumpfunWebSocket;
 
-  console.log("[Pumpfun] Unsubscribing from token trade events for keys:", keysArray);
+  console.log(
+    "[Pumpfun] Unsubscribing from token trade events for keys:",
+    keysArray
+  );
 
   const payload = {
     method: "unsubscribeTokenTrade",
