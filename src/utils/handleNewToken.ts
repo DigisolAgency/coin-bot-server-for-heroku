@@ -9,9 +9,10 @@ import bs58 from "bs58";
 import memepadModel, { IMemePad } from "../models/memepad.model";
 import walletModel from "../models/wallet.model";
 import { sendBuyTransactionWithJito } from "./jitoBundles";
-import { unsubscribeFromPumpfunData } from "./websocket";
+import { broadcastMessage, unsubscribeFromPumpfunData } from "./websocket";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import historyModel from "../models/history.model";
+import { getSolanaPrice } from "./statistics";
 
 export interface CoinInfo {
   usd_market_cap?: number;
@@ -92,7 +93,25 @@ export const handleNewToken = async (
 
     if (!signature) continue;
 
-    // await confirmTransaction(connection, signature);
+    // try {
+    //   await confirmTransaction(connection, signature);
+    // } catch (error) {
+    //   console.error(error);
+    // }
+
+    // const tx = await connection.getParsedTransactions([signature], {
+    //   maxSupportedTransactionVersion: 0,
+    // });
+
+    // if (!tx) continue;
+
+    // let buyAmount = 0;
+    // for await (const bal of tx[0].meta.postTokenBalances) {        
+    //   if (bal.owner == wallet.address) {
+    //     buyAmount = bal.uiTokenAmount.uiAmount
+    //     break;
+    //   }
+    // }
 
     await walletModel
       .findOneAndUpdate(
@@ -138,6 +157,15 @@ export const handleNewToken = async (
       type: "buy",
       signature
     })
+
+    // sendBuyToken(
+    //   wallet.address,
+    //   tokenMintAddress,
+    //   tokenData.symbol,
+    //   buyAmount,
+    //   tokenData.price,
+    //   tokenData.marketCap
+    // );
   }
 };
 
@@ -240,3 +268,26 @@ export const confirmTransaction = async (
     throw new Error(`Transaction ${signature} failed: ${value.err}`);
   }
 };
+
+// const sendBuyToken = async (
+//   wallet: string,
+//   tokenAddress: string,
+//   tokenSymbol: number,
+//   tokenAmount: number,
+//   tokenPrice: number,
+//   tokenMarketCapSol: number
+// ) => {
+//   const solPrice = await getSolanaPrice();
+
+//   const message = JSON.stringify({
+//     type: "buy_new_token",
+//     wallet,
+//     tokenAddress,
+//     tokenSymbol,
+//     tokenAmount,
+//     tokenPrice,
+//     percentDifference: 0,
+//     tokenMarketCap: tokenMarketCapSol * solPrice,
+//   });
+//   broadcastMessage(message);
+// };

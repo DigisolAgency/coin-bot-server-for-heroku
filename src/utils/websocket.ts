@@ -3,6 +3,7 @@ import WebSocket from "ws";
 export let wss: WebSocket.Server;
 export let pumpfunWebSocket: WebSocket;
 let pumpfunMessageHandler: ((data: any) => void) | null = null;
+let pumpfunTokenTradeMessageHandler: ((data: any) => void) | null = null;
 
 export function initWebSocket(server: any) {
   wss = new WebSocket.Server({ server });
@@ -94,18 +95,18 @@ export function subscribeToPumpfunTokenTrade(
     });
   }
 
-  if (pumpfunMessageHandler) {
-    ws.off("message", pumpfunMessageHandler);
+  if (pumpfunTokenTradeMessageHandler) {
+    ws.off("message", pumpfunTokenTradeMessageHandler);
   }
 
-  pumpfunMessageHandler = function message(data: any) {
+  pumpfunTokenTradeMessageHandler = function message(data: any) {
     const parsed = JSON.parse(data);
     console.log("[Pumpfun] Token Trade Received:", parsed);
 
     onTokenTrade(parsed);
   };
 
-  ws.on("message", pumpfunMessageHandler);
+  ws.on("message", pumpfunTokenTradeMessageHandler);
 }
 
 export function unsubscribeFromPumpfunTokenTrade(keysArray: string[]) {
@@ -126,8 +127,8 @@ export function unsubscribeFromPumpfunTokenTrade(keysArray: string[]) {
     });
   }
 
-  if (pumpfunMessageHandler) {
-    ws.off("message", pumpfunMessageHandler);
-    pumpfunMessageHandler = null;
+  if (pumpfunTokenTradeMessageHandler) {
+    ws.off("message", pumpfunTokenTradeMessageHandler);
+    pumpfunTokenTradeMessageHandler = null;
   }
 }
